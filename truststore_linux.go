@@ -65,14 +65,14 @@ func installPlatform(filename string, cert *x509.Certificate) error {
 		return err
 	}
 
-	cmd := CommandWithSudo("tee", systemTrustFilename(cert))
+	cmd := command("tee", systemTrustFilename(cert))
 	cmd.Stdin = bytes.NewReader(data)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return NewCmdError(err, cmd, out)
+		return NewCmdError(fmt.Errorf("%w. This operation needs to be run with sudo or as root", err), cmd, out)
 	}
 
-	cmd = CommandWithSudo(SystemTrustCommand...)
+	cmd = command(SystemTrustCommand...)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return NewCmdError(err, cmd, out)
@@ -87,13 +87,13 @@ func uninstallPlatform(filename string, cert *x509.Certificate) error {
 		return ErrNotSupported
 	}
 
-	cmd := CommandWithSudo("rm", "-f", systemTrustFilename(cert))
+	cmd := command("rm", "-f", systemTrustFilename(cert))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return NewCmdError(err, cmd, out)
+		return NewCmdError(fmt.Errorf("%w. This operation needs to be run with sudo or as root", err), cmd, out)
 	}
 
-	cmd = CommandWithSudo(SystemTrustCommand...)
+	cmd = command(SystemTrustCommand...)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return NewCmdError(err, cmd, out)
@@ -103,9 +103,6 @@ func uninstallPlatform(filename string, cert *x509.Certificate) error {
 	return nil
 }
 
-func CommandWithSudo(cmd ...string) *exec.Cmd {
-	if _, err := exec.LookPath("sudo"); err != nil {
-		return exec.Command(cmd[0], cmd[1:]...)
-	}
-	return exec.Command("sudo", append([]string{"--"}, cmd...)...)
+func command(cmd ...string) *exec.Cmd {
+	return exec.Command(cmd[0], cmd[1:]...)
 }
